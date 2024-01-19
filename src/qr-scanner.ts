@@ -613,15 +613,13 @@ class QrScanner {
 
     static async createQrEngine(workerPath: string = QrScanner.WORKER_PATH): Promise<Worker | BarcodeDetector> {
         // @ts-ignore no types defined for import
-        const createWorker = () => (import('./qr-scanner-worker.min.js') as Promise<{ createWorker: () => Worker }>)
-            .then((module) => module.createWorker());
 
         const useBarcodeDetector = !QrScanner._disableBarcodeDetector
             && 'BarcodeDetector' in window
             && BarcodeDetector.getSupportedFormats
             && (await BarcodeDetector.getSupportedFormats()).includes('qr_code');
 
-        if (!useBarcodeDetector) return createWorker();
+        if (!useBarcodeDetector) return new Worker(workerPath);
 
         // On Macs with an M1/M2 processor and macOS Ventura (macOS version 13), the BarcodeDetector is broken in
         // Chromium based browsers, regardless of the version. For that constellation, the BarcodeDetector does not
@@ -639,7 +637,7 @@ class QrScanner {
                 .then(({ architecture, platformVersion }) =>
                     /arm/i.test(architecture || 'arm') && parseInt(platformVersion || '13') >= /* Ventura */ 13)
                 .catch(() => true);
-        if (isChromiumOnMacWithArmVentura) return createWorker();
+        if (isChromiumOnMacWithArmVentura) return new Worker(workerPath);
 
         return new BarcodeDetector({ formats: ['qr_code'] });
     }
